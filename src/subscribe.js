@@ -15,6 +15,9 @@ exports.handler = function(event, context, callback){
   if(groupPath.length < 4 || groupPath[2] != "lambda"){
     console.info("Log group not for lambda function, no action taken");
     return callback();
+  }else if(groupPath[3] == config.consumer){
+    console.info("Log group is for the consumer function, no action taken");
+    return callback();
   }
 
   console.info("Subscribing consumer to log group", logGroup);
@@ -32,7 +35,7 @@ exports.handler = function(event, context, callback){
       console.error("Unable to create subscription filter for log group ", logGroup);
       console.error(err.code, "-", err.message);
     }
-    
+
     // Execute callback here, since we don't care if the putRetentionPolicy request fails or not
     return callback(err);
   });
