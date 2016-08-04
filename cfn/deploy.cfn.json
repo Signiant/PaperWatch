@@ -1,0 +1,270 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "SourceBucket": {
+      "Type": "String",
+      "Description": "The S3 bucket containing the zipped deployment package",
+      "AllowedPattern": "[a-zA-Z0-9\\_\\.\\-]+",
+      "MinLength": 3,
+      "MaxLength": 255,
+      "ConstraintDescription": "Invalid bucket name"
+    },
+    "SourceKey": {
+      "Type": "String",
+      "Description": "The key of the zipped deployment package",
+      "AllowedPattern": ".+\\.zip",
+      "ConstraintDescription": "Deployment package (SourceKey) must be a .zip file"
+    }
+  },
+  "Resources": {
+    "ConsumerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/paperwatch/consumer/",
+        "AssumeRolePolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": ["lambda.amazonaws.com"]},
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ConsumerPolicy",
+            "PolicyDocument":  {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "Logging",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:logs:*:*:*:*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ConsumerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "PaperWatchConsumer",
+        "Description": "Forwards CloudWatch logs to Papertrail",
+        "Role": { "Fn::GetAtt": [ "ConsumerRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Handler": "src/consumer.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "ConsumerPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Fn::GetAtt": [ "ConsumerFunction", "Arn" ] },
+        "Action": "lambda:InvokeFunction",
+        "Principal": { "Fn::Join": [ ".", [ "logs", { "Ref": "AWS::Region" }, "amazonaws", "com" ] ] },
+        "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
+      }
+    },
+
+    "SubscribeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/paperwatch/subscribe/",
+        "AssumeRolePolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": ["lambda.amazonaws.com"]},
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Policies": [
+          {
+            "PolicyName": "SubscribePolicy",
+            "PolicyDocument":  {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "Logging",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:logs:*:*:*:*"
+                },
+                {
+                  "Sid": "SubscribeFunction",
+                  "Action": [
+                    "logs:PutSubscriptionFilter",
+                    "logs:PutRetentionPolicy"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SubscribeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "PaperWatchSubscribe",
+        "Description": "Subscribes the consumer function to a lambda log group",
+        "Role": { "Fn::GetAtt": [ "SubscribeRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Handler": "src/subscribe.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "SubscribeEventRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "PaperWatchSubscribeEvent",
+        "Description": "Invoke the PaperWatch Subscribe function when new log groups are created",
+        "State": "ENABLED",
+        "EventPattern": {
+          "detail-type": [
+            "AWS API Call via CloudTrail"
+          ],
+          "detail": {
+            "eventSource": [
+              "logs.amazonaws.com"
+            ],
+            "eventName": [
+              "CreateLogGroup"
+            ]
+          }
+        },
+        "Targets": [
+          {
+            "Arn": { "Fn::GetAtt": [ "SubscribeFunction", "Arn" ] },
+            "Id": "SubscribeTarget"
+          }
+        ]
+      }
+    },
+    "SubscribePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": { "Fn::GetAtt": [ "SubscribeFunction", "Arn" ] },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": { "Fn::GetAtt": [ "SubscribeEventRule", "Arn" ] }
+      }
+    },
+    "UnsubscribeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/paperwatch/unsubscribe/",
+        "AssumeRolePolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": ["lambda.amazonaws.com"]},
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Policies": [
+          {
+            "PolicyName": "UnsubscribePolicy",
+            "PolicyDocument":  {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "Logging",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:logs:*:*:*:*"
+                },
+                {
+                  "Sid": "UnsubscribeFunction",
+                  "Action": [
+                    "logs:DeleteSubscriptionFilter"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "UnsubscribeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "PaperWatchUnsubscribe",
+        "Description": "Unsubscribes the consumer function from a lambda log group",
+        "Role": { "Fn::GetAtt": [ "UnsubscribeRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Handler": "src/unsubscribe.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "UnsubscribeEventRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "PaperWatchUnsubscribeEvent",
+        "Description": "Invoke the PaperWatch Unsubscribe function lambda functions are deleted",
+        "State": "ENABLED",
+        "EventPattern": {
+          "detail-type": [
+            "AWS API Call via CloudTrail"
+          ],
+          "detail": {
+            "eventSource": [
+              "lambda.amazonaws.com"
+            ],
+            "eventName": [
+              "DeleteFunction20150331"
+            ]
+          }
+        },
+        "Targets": [
+          {
+            "Arn": { "Fn::GetAtt": [ "UnsubscribeFunction", "Arn" ] },
+            "Id": "UnsubscribeTarget"
+          }
+        ]
+      }
+    },
+    "UnsubscribePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": { "Fn::GetAtt": [ "UnsubscribeFunction", "Arn" ] },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": { "Fn::GetAtt": [ "UnsubscribeEventRule", "Arn" ] }
+      }
+    }
+  }
+}
