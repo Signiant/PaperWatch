@@ -6,21 +6,27 @@ A tool for automatically forwarding CloudWatch logs from your lambda functions t
 Follow these steps to set up and deploy PaperWatch to AWS:
 
 #### 1. Configure
-The consumer reads the logging endpoint from the configuration file stored at ```config/papertrail.json```.  
-Modify the ```host``` and ```port``` variables in this file to point to your papertrail endpoint.  
+The two lambda functions reads the following configuration information from `config/papertrail.json`
 
-When PaperWatch subscribes to a log group, it will reduce the log retention period to the ```retentionPeriod``` (in days).  If you do not wish to modify the retention period, simply remove this variable from the configuration file.
-
-The ```consumer``` variable is used by the Subscribe function to determine to which lambda function the log groups should be sent to.  Do not change this value unless you are modifying the cloudformation template, or deploying without it.
+| Key | Required | Type | Description |
+| ----- | ----- | ---------- |
+| `host` | Yes  | _String_ | The paper trail endpoint's address |
+| `port` | Yes | _Number_ | The paper trail endpoint's port |
+| `consumer` | Yes | _String_ | The name of the consumer function.  Used by the Subscribe function to avoid subscribing the consumer to itself.  Do not change unless you are modifying the CFN template.|
+| `retentionPeriod` | No | _Number_ | If included, updates the CloudWatch log group's retention period (in days) |
+| `exclude` | No | _Array_ of _Strings_ | List of lambda function names that the Subscribe function should ignore |
 
 *Example config:*
-
 ```
 {
   "host": "samplehost.papertrailapp.com",
   "port": 12345,
   "retentionPeriod": 3
-  "consumer": "PaperWatchConsumer""
+  "consumer": "PaperWatchConsumer",
+  "exclude": [
+    "TestFunction",
+    "LoudFunction"
+  ]
 }
 ```
 

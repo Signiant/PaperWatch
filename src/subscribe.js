@@ -11,16 +11,19 @@ exports.handler = function(event, context, callback){
   var logGroup = event.detail.requestParameters.logGroupName;
   var groupPath = logGroup.split('/');
 
-  // Verify that the log group belongs to a lambda function (formatted /aws/lambda/FunctionName)
   if(groupPath.length < 4 || groupPath[2] != "lambda"){
+    // Verify that the log group belongs to a lambda function (formatted /aws/lambda/FunctionName)
     console.info("Log group not for lambda function, no action taken");
     return callback();
   }else if(groupPath[3] == config.consumer){
+    //Don't subscribe the consumer function to its own log group
     console.info("Log group is for the consumer function, no action taken");
     return callback();
+  }else if(config.exclude && config.exclude.indexOf(groupPath[3]) > -1){
+    //Don't add a subscription if the function is on the exclusion list
+    console.info("Log group is for an excluded lambda function, no action taken");
+    return callback();
   }
-
-  console.info("Subscribing consumer to log group", logGroup);
 
   var subscriptionParams = {
     logGroupName: logGroup,

@@ -2,5 +2,6 @@
   "host": "<HOST NAME>",
   "port": "<PORT>",
   "retentionPeriod": 3,
-  "consumer": "PaperWatchConsumer"
+  "consumer": "PaperWatchConsumer",
+  "exclude": []
 }
