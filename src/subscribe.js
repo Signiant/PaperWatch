@@ -6,24 +6,35 @@ var config = require('../config/paperwatch.json');
 // Handler function
 exports.handler = function(event, context, callback){
 
-  // Construct consumer function arn
-  var consumerArn = "arn:aws:lambda:" + event.region + ":" + event.account + ":function:" + config.consumer;
   var logGroup = event.detail.requestParameters.logGroupName;
-  var groupPath = logGroup.split('/');
+  var consumer;
 
-  if(groupPath.length < 4 || groupPath[2] != "lambda"){
-    // Verify that the log group belongs to a lambda function (formatted /aws/lambda/FunctionName)
-    console.info("Log group not for lambda function, no action taken");
+  // Check configured sources for a matching prefix
+  config.sources.some(function(source){
+    if(logGroup.startsWith(source.prefix)){
+      consumer = source.consumer;
+      return true;
+    }
+  });
+
+  if(!consumer){
+    // Invalid log source
+    console.info("Invalid log group source, no action taken");
     return callback();
-  }else if(groupPath[3] == config.consumer){
-    //Don't subscribe the consumer function to its own log group
-    console.info("Log group is for the consumer function, no action taken");
+
+  }else if(config.sources.some(function(source){ return "/aws/lambda/" + source.consumer == logGroup; })){
+    // Don't subscribe a consumer function to a consumer log group
+    console.info("Log group is for a consumer function, no action taken");
     return callback();
-  }else if(config.exclude && config.exclude.indexOf(groupPath[3]) > -1){
-    //Don't add a subscription if the function is on the exclusion list
-    console.info("Log group is for an excluded lambda function, no action taken");
+
+  }else if(config.exclude && config.exclude.indexOf(logGroup) > -1){
+    //Check if the log group is on the exclusion list
+    console.log("Log group excluded, no action taken");
     return callback();
   }
+
+  // Construct consumer function arn
+  var consumerArn = "arn:aws:lambda:" + event.region + ":" + event.account + ":function:" + consumer;
 
   var subscriptionParams = {
     logGroupName: logGroup,

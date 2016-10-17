@@ -2,6 +2,15 @@
   "host": "<HOST NAME>",
   "port": "<PORT>",
   "retentionPeriod": 3,
-  "consumer": "PaperWatchConsumer",
+  "sources": [
+    {
+      "prefix": "API-Gateway-Execution-Logs_",
+      "consumer": "APIGatewayLogConsumer"
+    },
+    {
+      "prefix": "/aws/lambda/",
+      "consumer": "LambdaLogConsumer"
+    }
+  ],
   "exclude": []
 }
