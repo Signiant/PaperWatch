@@ -55,7 +55,7 @@
                     { "Fn::Join": [ "", [ "arn:aws:apigateway:", { "Ref": "AWS::Region" }, "::/restapis"  ] ] }
                   ]
                 }
-              ],
+              ]
             }
           }
         ]
