@@ -111,6 +111,31 @@
         "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
       }
     },
+    "ECSConsumerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "ECSLogConsumer",
+        "Description": "Forwards CloudWatch logs created by ECS services to Papertrail",
+        "Role": { "Fn::GetAtt": [ "ConsumerRole", "Arn" ] },
+        "Runtime": "nodejs8.10",
+        "Handler": "src/ecs.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "ECSConsumerPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Fn::GetAtt": [ "ECSConsumerFunction", "Arn" ] },
+        "Action": "lambda:InvokeFunction",
+        "Principal": { "Fn::Join": [ ".", [ "logs", { "Ref": "AWS::Region" }, "amazonaws", "com" ] ] },
+        "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
+      }
+    },
     "SubscribeRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
