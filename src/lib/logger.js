@@ -6,7 +6,7 @@ require('winston-papertrail').Papertrail;
 // Extract and unzip log data from event object
 exports.extract =  function(event, callback){
 
-  var payload = new Buffer(event.awslogs.data, 'base64');
+  var payload = Buffer.from(event.awslogs.data, 'base64');
 
   zlib.gunzip(payload, function(err, result){
     if(err){
