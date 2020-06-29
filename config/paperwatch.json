@@ -12,5 +12,7 @@
       "consumer": "LambdaLogConsumer"
     }
   ],
-  "exclude": []
+  "exclude": [],
+  "logLevelExtractor": ".* - (info|error|debug|trace|silly|warn): ",
+  "defaultLogLevel": "info"
 }
