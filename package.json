@@ -1,0 +1,25 @@
+{
+  "name": "PaperWatch",
+  "version": "1.0.0",
+  "description": "Automatically forward CloudWatch logs from Lambda functions to Papertrail",
+  "keywords": [
+    "aws",
+    "lambda",
+    "cloudwatch",
+    "papertrail",
+    "logs"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Signiant/PaperWatch.git"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.4.11",
+    "winston": "^2.2.0",
+    "winston-papertrail": "^1.0.2"
+  },
+  "scripts": {
+    "build": "npm install; zip -r lambda.zip ."
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,235 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "SourceBucket": {
+      "Type": "String",
+      "Description": "The S3 bucket containing the zipped deployment package",
+      "AllowedPattern": "[a-zA-Z0-9\\_\\.\\-]+",
+      "MinLength": 3,
+      "MaxLength": 255,
+      "ConstraintDescription": "Invalid bucket name"
+    },
+    "SourceKey": {
+      "Type": "String",
+      "Description": "The key of the zipped deployment package",
+      "AllowedPattern": ".+\\.zip",
+      "ConstraintDescription": "Deployment package (SourceKey) must be a .zip file"
+    }
+  },
+  "Resources": {
+    "ConsumerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/paperwatch/consumer/",
+        "AssumeRolePolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": ["lambda.amazonaws.com"]},
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ConsumerPolicy",
+            "PolicyDocument":  {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "Logging",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:logs:*:*:*:*"
+                },
+                {
+                  "Sid": "APIMapping",
+                  "Action": [
+                    "apigateway:GET"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    { "Fn::Join": [ "", [ "arn:aws:apigateway:", { "Ref": "AWS::Region" }, "::/restapis"  ] ] }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LambdaConsumerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "LambdaLogConsumer",
+        "Description": "Forwards CloudWatch logs created by Lambda functions to Papertrail",
+        "Role": { "Fn::GetAtt": [ "ConsumerRole", "Arn" ] },
+        "Runtime": "nodejs10.x",
+        "Handler": "src/lambda.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "LambdaConsumerPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Fn::GetAtt": [ "LambdaConsumerFunction", "Arn" ] },
+        "Action": "lambda:InvokeFunction",
+        "Principal": { "Fn::Join": [ ".", [ "logs", { "Ref": "AWS::Region" }, "amazonaws", "com" ] ] },
+        "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
+      }
+    },
+    "APIGatewayConsumerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "APIGatewayLogConsumer",
+        "Description": "Forwards CloudWatch logs created by API Gateway to Papertrail",
+        "Role": { "Fn::GetAtt": [ "ConsumerRole", "Arn" ] },
+        "Runtime": "nodejs10.x",
+        "Handler": "src/apiGateway.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "APIGatewayConsumerPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Fn::GetAtt": [ "APIGatewayConsumerFunction", "Arn" ] },
+        "Action": "lambda:InvokeFunction",
+        "Principal": { "Fn::Join": [ ".", [ "logs", { "Ref": "AWS::Region" }, "amazonaws", "com" ] ] },
+        "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
+      }
+    },
+    "ECSConsumerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "ECSLogConsumer",
+        "Description": "Forwards CloudWatch logs created by ECS services to Papertrail",
+        "Role": { "Fn::GetAtt": [ "ConsumerRole", "Arn" ] },
+        "Runtime": "nodejs10.x",
+        "Handler": "src/ecs.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "ECSConsumerPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Fn::GetAtt": [ "ECSConsumerFunction", "Arn" ] },
+        "Action": "lambda:InvokeFunction",
+        "Principal": { "Fn::Join": [ ".", [ "logs", { "Ref": "AWS::Region" }, "amazonaws", "com" ] ] },
+        "SourceArn":  { "Fn::Join": [ ":", [ "arn", "aws", "logs", { "Ref": "AWS::Region" }, { "Ref": "AWS::AccountId" }, "log-group", "*", "*" ] ] }
+      }
+    },
+    "SubscribeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/paperwatch/subscribe/",
+        "AssumeRolePolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": ["lambda.amazonaws.com"]},
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Policies": [
+          {
+            "PolicyName": "SubscribePolicy",
+            "PolicyDocument":  {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "Logging",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:logs:*:*:*:*"
+                },
+                {
+                  "Sid": "SubscribeFunction",
+                  "Action": [
+                    "logs:PutSubscriptionFilter",
+                    "logs:PutRetentionPolicy"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SubscribeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "PaperWatchSubscribe",
+        "Description": "Subscribes the consumer function to a lambda log group",
+        "Role": { "Fn::GetAtt": [ "SubscribeRole", "Arn" ] },
+        "Runtime": "nodejs10.x",
+        "Handler": "src/subscribe.handler",
+        "MemorySize": 128,
+        "Timeout": 300,
+        "Code": {
+          "S3Bucket": { "Ref": "SourceBucket" },
+          "S3Key": { "Ref": "SourceKey" }
+        }
+      }
+    },
+    "SubscribeEventRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "PaperWatchSubscribeEvent",
+        "Description": "Invoke the PaperWatch Subscribe function when new log groups are created",
+        "State": "ENABLED",
+        "EventPattern": {
+          "detail-type": [
+            "AWS API Call via CloudTrail"
+          ],
+          "detail": {
+            "eventSource": [
+              "logs.amazonaws.com"
+            ],
+            "eventName": [
+              "CreateLogGroup"
+            ]
+          }
+        },
+        "Targets": [
+          {
+            "Arn": { "Fn::GetAtt": [ "SubscribeFunction", "Arn" ] },
+            "Id": "SubscribeTarget"
+          }
+        ]
+      }
+    },
+    "SubscribePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": { "Fn::GetAtt": [ "SubscribeFunction", "Arn" ] },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": { "Fn::GetAtt": [ "SubscribeEventRule", "Arn" ] }
+      }
+    }
+  }
+}
