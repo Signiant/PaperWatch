@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.708.0",
-    "winston": "^2.2.0",
+    "winston": "^2.4.5",
     "winston-papertrail": "^1.0.5"
   },
   "scripts": {
