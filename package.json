@@ -14,9 +14,9 @@
     "url": "https://github.com/Signiant/PaperWatch.git"
   },
   "dependencies": {
-    "aws-sdk": "^2.4.11",
+    "aws-sdk": "^2.708.0",
     "winston": "^2.2.0",
-    "winston-papertrail": "^1.0.2"
+    "winston-papertrail": "^1.0.5"
   },
   "scripts": {
     "build": "npm install; zip -r lambda.zip ."
