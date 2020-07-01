@@ -13,6 +13,6 @@
     }
   ],
   "exclude": [],
-  "logLevelExtractor": ".* - (info|error|debug|trace|silly|warn): ",
+  "logLevelExtractor": ".* - (error|warn|info|http|verbose|debug|silly): ",
   "defaultLogLevel": "info"
 }
