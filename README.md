@@ -37,7 +37,7 @@ The two lambda functions reads the following configuration information from `con
   "exclude": [
     "TestFunction",
     "LoudFunction"
-  ]
+  ],
   "logLevelExtractor": ".* - (info|error|debug|trace|silly): ",
   "defaultLogLevel": "info"
 }

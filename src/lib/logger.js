@@ -4,7 +4,6 @@ var zlib = require('zlib');
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
 
-
 const logLevelExtractorRegex = new RegExp(config.logLevelExtractor)
 
 const getLogLevel = (message) => {
