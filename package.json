@@ -1,6 +1,6 @@
 {
   "name": "PaperWatch",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Automatically forward CloudWatch logs from Lambda functions to Papertrail",
   "keywords": [
     "aws",
