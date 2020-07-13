@@ -1,7 +1,20 @@
 // Dependencies
+var config = require('../../config/paperwatch.json');
 var zlib = require('zlib');
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
+
+const logLevelExtractorRegex = new RegExp(config.logLevelExtractor)
+
+const getLogLevel = (message) => {
+  const result = logLevelExtractorRegex.exec(message);
+
+  if (!result || result.length === 0) {
+    // if unable to extract, return the default log level
+    return config.defaultLogLevel;
+  }
+  return result[1];
+}
 
 // Extract and unzip log data from event object
 exports.extract =  function(event, callback){
@@ -33,7 +46,8 @@ exports.post = function(data, transport, callback){
   // Transport connected, log all logEvents
   transport.on('connect', function(){
       data.logEvents.forEach(function(logEvent){
-        logger.info(logEvent.message);
+        const logLevel = getLogLevel(logEvent.message);
+        logger.log(logLevel, logEvent.message);
       });
       // Close transport, return successful
       logger.close();
