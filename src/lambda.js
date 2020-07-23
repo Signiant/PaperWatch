@@ -14,7 +14,7 @@ exports.handler = function(event, context, callback){
 
     // Construct the winston transport for forwarding lambda logs to papertrail
     var papertrail = new winston.transports.Papertrail({
-      level: 'debug',
+      level: 'silly',
       host: config.host,
       port: config.port,
       hostname: "Lambda_" + data.owner + "_" + process.env.AWS_REGION,
