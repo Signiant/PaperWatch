@@ -51,10 +51,20 @@ function constructTransport(event, callback){
 
     program = program.join("_");
 
+    if(config.host == "<HOST NAME>"){
+    // use default paperwatch.json that is not set with papertrail host or port
+    // control tower customization deployment. host and port will be set as env variables
+        var paperTrailHost = process.env.PAPERTRAIL_HOST;
+        var paperTrailPort = process.env.PAPERTRAIL_PORT;
+    }else{
+        var paperTrailHost = config.host;
+        var paperTrailPort = config.port;
+    }
+
     // Construct the winston transport for forwarding lambda logs to papertrail
     var papertrail = new winston.transports.Papertrail({
-      host: config.host,
-      port: config.port,
+      host: paperTrailHost,
+      port: paperTrailPort,
       hostname: "API-Gateway_" + data.owner + "_" + process.env.AWS_REGION,
       program: program,
       logFormat: function(level, message){
