@@ -68,9 +68,10 @@ Existing functions must be subscribed manually.
 ### Manual Subscription
 To manually subscribe a function, navigate to the CloudWatch console and follow these steps:  
 1. Locate the log group for the function you wish to subscribe, selecting it by checking the box on the left  
-2. Open the _Actions_ dropdown and choose _Stream to AWS Lambda_  
-3. From the Lambda Function dropdown, select the consumer function (LambdaLogConsumer or APIGatewayLogConsumer by default), and click next  
+2. Open the _Actions_ dropdown and choose _Subscription filters_ -> _Create lambda subscription filter_  
+3. From the Lambda Function dropdown, select the consumer function (LambdaLogConsumer or APIGatewayLogConsumer by default)
 4. From the Log Format dropdown, select _Other_ and click next  
-4. Click _Start Streaming_  
+5. For the _Subscription filter name_ enter Papertrail
+6. Click _Start Streaming_  
 
 PaperWatch will now begin forwarding the functions logs to Papertrail
