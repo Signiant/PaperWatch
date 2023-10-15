@@ -22,12 +22,19 @@ exports.handler = function(event, context, callback){
         var paperTrailPort = config.port;
     }
 
+    var nameParts = data.logGroup.split('/').pop().split('-')
+    var env = nameParts[0]
+    var app = nameParts[1]
+    var service = nameParts[2]
+    var hostname = [env, app].join('-')
+    var program = service;
+
     // Construct the winston transport for forwarding ECS logs to papertrail
     var papertrail = new winston.transports.Papertrail({
       host: paperTrailHost,
       port: paperTrailPort,
-      hostname: "ECS_" + data.owner + "_" + process.env.AWS_REGION,
-      program: data.logGroup.split('/').pop(),
+      hostname: hostname,
+      program: program,
       logFormat: function(level, message){
         return message;
       }
