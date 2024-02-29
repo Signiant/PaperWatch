@@ -20,7 +20,13 @@ exports.handler = function(event, context, callback){
         var syslogPort = config.port;
     }
 
-    var nameParts = data.logGroup.split('/').pop().split('-')
+    // Some of the log groups are named like `ecs/environment-application-service`,
+    // some with a leading slash like `/ecs/environment-application-service`, and
+    // some with the service after a slash like `/ecs/environment-application/service`.
+    // This normalizes them, extracting the environment, application, and service.
+    var logGroupName = data.logGroup.replace(/^\/?ecs\//, '');
+    var nameParts = logGroupName.split(/[-\/]/)
+
     var env = nameParts[0]
     var app = nameParts[1]
     var service = nameParts[2]
