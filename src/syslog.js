@@ -4,6 +4,12 @@ var logger = require('./lib/logger');
 var winston = require('winston');
 require('winston-syslog').Syslog;
 
+class CustomeProducer {
+  produce(d) {
+    return d.message;
+  }
+}
+
 // Handler function
 exports.handler = function(event, context, callback){
 
@@ -44,6 +50,7 @@ exports.handler = function(event, context, callback){
       port: syslogPort,
       localhost: [env, app].join('-'),
       app_name: service,
+      customProducer: CustomProducer,
     });
 
     var wl = new winston.Logger({ transports: [ syslog ] });
