@@ -28,7 +28,7 @@ exports.handler = function(event, context, callback){
       host: paperTrailHost,
       port: paperTrailPort,
       hostname: "Lambda_" + data.owner + "_" + process.env.AWS_REGION,
-      program: data.logGroup.split('/').pop(),
+      program: data.logGroup.split('/').pop().split('-').slice(0, -1).join('-'),
       logFormat: function(level, message){
         return message;
       }
