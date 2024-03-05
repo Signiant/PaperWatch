@@ -4,7 +4,7 @@ var logger = require('./lib/logger');
 var winston = require('winston');
 require('winston-syslog').Syslog;
 
-class CustomeProducer {
+class CustomProducer {
   produce(d) {
     return d.message;
   }
